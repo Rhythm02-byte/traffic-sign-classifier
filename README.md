@@ -65,7 +65,13 @@ data/gtsrb/
   GT-final_test.csv                              # test labels, ';' separated (Filename;ClassId)
 ```
 
-The torchvision `GTSRB` class reads this layout. A converter from the Kaggle copy of GTSRB is not in the repo yet.
+The torchvision `GTSRB` class reads this layout. If you have the Kaggle copy of GTSRB (a `Train/` folder with 43 class folders, a `Test/` folder, and `Test.csv`) in `data/`, convert it with:
+
+```bash
+python -m tsc.prepare_data
+```
+
+The converter only reads the Kaggle files. It refuses to overwrite an existing `data/gtsrb/`.
 
 ## Running
 
