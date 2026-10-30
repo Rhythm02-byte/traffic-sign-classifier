@@ -30,3 +30,21 @@ Per-class results are in `outputs/*_per_class_accuracy.csv`, and confusion matri
 
 1. Robustness tests: compare the baseline and the 224 px fine-tuned model under corruption.
 2. Robustness evaluation: blur, brightness, noise, fog-like corruption, and rotation, comparing the baseline and the 224 px fine-tuned model.
+
+## Robustness (official test set, severities 1-3)
+
+Corruptions are applied to the 32 px test images, so both models see identical inputs. Results are in `outputs/robustness_results.csv` and `outputs/robustness_plot.png`.
+
+| Condition | Baseline CNN | ResNet-18, 224 px, fine-tuned |
+|---|---|---|
+| Clean | 96.69% | **97.69%** |
+| Blur 1 / 2 / 3 | 96.18 / 91.22 / 79.53% | **97.66** / 87.99 / 51.00% |
+| Darker 1 / 2 / 3 | 96.07 / 93.94 / 87.28% | **97.42 / 96.84 / 94.73%** |
+| Brighter 1 / 2 / 3 | 95.38 / 93.37 / 89.50% | **96.11** / 93.74 / 89.78% |
+| Noise 1 / 2 / 3 | **86.84 / 68.93 / 42.92%** | 64.89 / 36.42 / 15.10% |
+| Fog-like haze 1 / 2 / 3 | 93.79 / 80.59 / 53.69% | **96.57 / 91.56 / 83.48%** |
+| Rotation 1 / 2 / 3 | **95.06 / 92.41 / 87.40%** | 95.61 / 87.35 / 73.80% |
+
+- The fine-tuned model is better on clean images, darkness, and haze. It is much worse on noise, and worse on heavy blur and on large rotations.
+- The clean-accuracy gain does not carry over to every corruption. A single clean-set number would overstate the model.
+- Single seed. The corruption strengths are simple approximations of real conditions.
