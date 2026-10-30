@@ -41,8 +41,11 @@ def load_model(name, device):
 
 
 def predict_image(model, preprocess, path, device, top_k=3):
-    image = Image.open(path).convert("RGB")
-    x = to_training_size(image).unsqueeze(0)  # shape (1, 3, 32, 32), uint8
+    return predict_pil(model, preprocess, Image.open(path), device, top_k)
+
+
+def predict_pil(model, preprocess, image, device, top_k=3):
+    x = to_training_size(image.convert("RGB")).unsqueeze(0)  # shape (1, 3, 32, 32), uint8
     with torch.no_grad():
         probs = torch.softmax(model(preprocess(x).to(device)), dim=1)[0].cpu()
     top = torch.topk(probs, top_k)

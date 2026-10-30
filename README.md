@@ -98,6 +98,15 @@ Classify your own photos. The model expects a tightly cropped sign, not a full s
 python -m tsc.predict my_sign.jpg --model resnet-augmented
 ```
 
+Try the model in a browser. Install the demo's extra dependency, then start the app:
+
+```bash
+pip install -r requirements-demo.txt
+python -m tsc.demo
+```
+
+Open the local address it prints (http://127.0.0.1:7860). Upload a cropped sign, pick a model, and see the top three guesses.
+
 Tests (no dataset or checkpoints needed):
 
 ```bash
@@ -116,6 +125,8 @@ src/tsc/
   finetune.py      unfrozen fine-tuning, optional augmentation
   robustness.py    corruptions and the robustness test
   predict.py       classify your own cropped sign photos
+  prepare_data.py  convert the Kaggle copy of GTSRB into torchvision's layout
+  demo.py          Gradio web app for uploading and classifying a sign
 tests/             pytest suite (14 tests)
 docs/experiments.md  every run and its settings
 outputs/           results (CSV, plots); checkpoints are kept local
