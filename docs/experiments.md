@@ -28,8 +28,8 @@ Per-class results are in `outputs/*_per_class_accuracy.csv`, and confusion matri
 
 ## Next
 
-1. Robustness tests: compare the baseline and the 224 px fine-tuned model under corruption.
-2. Robustness evaluation: blur, brightness, noise, fog-like corruption, and rotation, comparing the baseline and the 224 px fine-tuned model.
+1. Test whether training with blur and noise augmentation closes the gap on noisy and blurry images.
+2. Add pytest tests, `predict.py`, and the README.
 
 ## Robustness (official test set, severities 1-3)
 
