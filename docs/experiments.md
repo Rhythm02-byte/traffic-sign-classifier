@@ -13,6 +13,7 @@ Test set: official GTSRB test split, 12,630 images. Validation: 10% of the train
 | ResNet-18, frozen backbone, 224 px (`tsc.transfer --size 224`) | 22,059 of 11,198,571 | 0.908 | **0.7860** |
 | ResNet-18, fine-tuned, 224 px, seed 42 (`tsc.finetune --size 224`) | 11,198,571 | 0.999 | **0.9769** |
 | ResNet-18, fine-tuned, 224 px, seed 0 (`tsc.finetune --size 224 --seed 0`) | 11,198,571 | 0.999 | **0.9756** |
+| ResNet-18, fine-tuned, 224 px, blur and noise augmentation (`tsc.finetune --size 224 --augment`) | 11,198,571 | 0.999 | **0.9811** |
 
 Per-class results are in `outputs/*_per_class_accuracy.csv`, and confusion matrices are in `outputs/*_confusion_matrix.png`, one pair per row above.
 
@@ -28,8 +29,8 @@ Per-class results are in `outputs/*_per_class_accuracy.csv`, and confusion matri
 
 ## Next
 
-1. Test whether training with blur and noise augmentation closes the gap on noisy and blurry images.
-2. Add pytest tests, `predict.py`, and the README.
+1. README with the results table, setup steps, and how to run each script.
+2. Move the Kaggle conversion scripts into the repo so the data can be rebuilt.
 
 ## Robustness (official test set, severities 1-3)
 
@@ -48,3 +49,21 @@ Corruptions are applied to the 32 px test images, so both models see identical i
 - The fine-tuned model is better on clean images, darkness, and haze. It is much worse on noise, and worse on heavy blur and on large rotations.
 - The clean-accuracy gain does not carry over to every corruption. A single clean-set number would overstate the model.
 - Single seed. The corruption strengths are simple approximations of real conditions.
+
+### With blur and noise augmentation
+
+Training used random blur (sigma 0.5 to 1.5) and random noise (standard deviation 5 to 25) on a share of the training batches. Clean validation, not augmented.
+
+| Condition | Baseline CNN | Fine-tuned 224 px | Fine-tuned 224 px + augmentation |
+|---|---|---|---|
+| Clean | 96.69% | 97.69% | **98.11%** |
+| Blur 3 | 79.53% | 51.00% | **85.30%** |
+| Noise 1 / 2 / 3 | 86.84 / 68.93 / 42.92% | 64.89 / 36.42 / 15.10% | **94.72 / 86.37 / 62.83%** |
+| Rotation 3 | 87.40% | 73.80% | **91.68%** |
+| Darker 3 | 87.28% | **94.73%** | 89.79% |
+| Fog-like haze 3 | 53.69% | **83.48%** | 80.01% |
+
+- The augmented model beats the baseline in all 18 corruption conditions.
+- Noise severities 1 and 2 are inside the training range. Severity 3 (standard deviation 40) is outside it, and the model still reaches 62.83%. Blur severities 1 and 2 are also inside the training range.
+- Darkness and haze were not in training. The augmented model's gains on haze severities 1 and 2 are the only evidence here that augmentation helps unseen corruptions, and it's weak evidence.
+- Its losses on the two strongest darkness and haze levels are small, but real.

@@ -54,13 +54,15 @@ def load_models(device):
     baseline = SmallCNN().to(device)
     baseline.load_state_dict(torch.load(OUTPUTS_DIR / "baseline.pt", map_location=device))
 
-    resnet = build_resnet18(pretrained=False).to(device)
-    resnet.load_state_dict(torch.load(OUTPUTS_DIR / "resnet18_finetuned_224px.pt", map_location=device))
-
-    return {
-        "baseline CNN": (baseline, normalize),
-        "ResNet-18 224px fine-tuned": (resnet, partial(preprocess_for_resnet, size=224)),
-    }
+    models = {"baseline CNN": (baseline, normalize)}
+    for name, checkpoint in [
+        ("ResNet-18 224px fine-tuned", "resnet18_finetuned_224px.pt"),
+        ("ResNet-18 224px augmented", "resnet18_finetuned_224px_augmented.pt"),
+    ]:
+        model = build_resnet18(pretrained=False).to(device)
+        model.load_state_dict(torch.load(OUTPUTS_DIR / checkpoint, map_location=device))
+        models[name] = (model, partial(preprocess_for_resnet, size=224))
+    return models
 
 
 def accuracy_on(model, preprocess, X, y, device):
