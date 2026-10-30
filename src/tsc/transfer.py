@@ -1,4 +1,6 @@
 """Transfer learning: pretrained ResNet-18 with a new 43-class head, backbone frozen."""
+import argparse
+from functools import partial
 from pathlib import Path
 
 import torch
@@ -24,10 +26,15 @@ IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 
-def preprocess_for_resnet(x):
+def size_tag(size):
+    # The default size keeps the original file names. Other sizes get a suffix, e.g. _224px.
+    return "" if size == INPUT_SIZE else f"_{size}px"
+
+
+def preprocess_for_resnet(x, size=INPUT_SIZE):
     # x holds uint8 images of shape (N, 3, 32, 32), as stored by to_tensors
     x = x.float() / 255.0  # 0..255 -> 0..1
-    x = F.interpolate(x, size=(INPUT_SIZE, INPUT_SIZE), mode="bilinear", align_corners=False)
+    x = F.interpolate(x, size=(size, size), mode="bilinear", align_corners=False)
     return (x - IMAGENET_MEAN) / IMAGENET_STD
 
 
@@ -54,26 +61,29 @@ def set_train_mode(model):
             module.eval()
 
 
-def train_head(model, loader, optimizer, loss_fn, device):
+def train_head(model, loader, optimizer, loss_fn, device, preprocess):
     set_train_mode(model)
     for xb, yb in loader:
-        xb, yb = preprocess_for_resnet(xb).to(device), yb.to(device)
+        xb, yb = preprocess(xb).to(device), yb.to(device)
         optimizer.zero_grad()
         loss = loss_fn(model(xb), yb)
         loss.backward()
         optimizer.step()
 
 
-def validation_accuracy(model, loader, device):
-    y_true, y_pred = collect_predictions(model, loader, device, preprocess_for_resnet)
+def validation_accuracy(model, loader, device, preprocess):
+    y_true, y_pred = collect_predictions(model, loader, device, preprocess)
     return (y_true == y_pred).float().mean().item()
 
 
-def main():
+def main(size=INPUT_SIZE):
     set_seed(SEED)
     device = get_device()
-    print(f"Using device: {device}")
+    print(f"Using device: {device}, input size {size}px")
     OUTPUTS_DIR.mkdir(exist_ok=True)
+    preprocess = partial(preprocess_for_resnet, size=size)
+    tag = size_tag(size)
+    checkpoint = OUTPUTS_DIR / f"resnet18_frozen{tag}.pt"
 
     # Same data and same split as the baseline (same seed). Only the model and preprocessing change.
     X, y = to_tensors(load_train_split())
@@ -93,28 +103,31 @@ def main():
 
     best_acc = 0.0
     for epoch in range(1, EPOCHS + 1):
-        train_head(model, train_loader, optimizer, loss_fn, device)
-        val_acc = validation_accuracy(model, val_loader, device)
+        train_head(model, train_loader, optimizer, loss_fn, device, preprocess)
+        val_acc = validation_accuracy(model, val_loader, device, preprocess)
         print(f"epoch {epoch:2d}  validation accuracy {val_acc:.3f}")
         if val_acc > best_acc:
             best_acc = val_acc
-            torch.save(model.state_dict(), CHECKPOINT)
+            torch.save(model.state_dict(), checkpoint)
 
-    print(f"Best validation accuracy: {best_acc:.3f}, saved to {CHECKPOINT}")
+    print(f"Best validation accuracy: {best_acc:.3f}, saved to {checkpoint}")
 
     # Evaluate the saved best checkpoint on the official test set
     model = build_resnet18(pretrained=False).to(device)
-    model.load_state_dict(torch.load(CHECKPOINT, map_location=device))
-    print(f"Loaded checkpoint: {CHECKPOINT}")
+    model.load_state_dict(torch.load(checkpoint, map_location=device))
+    print(f"Loaded checkpoint: {checkpoint}")
     evaluate_model(
         model,
-        preprocess_for_resnet,
+        preprocess,
         device,
-        csv_path=OUTPUTS_DIR / "resnet18_frozen_per_class_accuracy.csv",
-        cm_path=OUTPUTS_DIR / "resnet18_frozen_confusion_matrix.png",
-        title="ResNet-18, frozen backbone (each row sums to 1)",
+        csv_path=OUTPUTS_DIR / f"resnet18_frozen{tag}_per_class_accuracy.csv",
+        cm_path=OUTPUTS_DIR / f"resnet18_frozen{tag}_confusion_matrix.png",
+        title=f"ResNet-18, frozen backbone, {size}px (each row sums to 1)",
     )
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--size", type=int, default=INPUT_SIZE, help="input resolution in pixels")
+    args = parser.parse_args()
+    main(size=args.size)
